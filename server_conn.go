@@ -211,9 +211,10 @@ func (c *serverConn) OnPacket(r *parser.PacketDecoder) {
 		u := c.getUpgrade()
 		newWriter := t.NextWriter
 		if u != nil {
-			if w, _ := t.NextWriter(message.MessageText, parser.NOOP); w != nil {
-				w.Close()
-			}
+			// if w, _ := t.NextWriter(message.MessageText, parser.NOOP); w != nil {
+			// 	w.Close()
+			// }
+			go c.noopLoop()
 			newWriter = u.NextWriter
 		}
 		if w, _ := newWriter(message.MessageText, parser.PONG); w != nil {
@@ -376,5 +377,16 @@ func (c *serverConn) pingLoop() {
 			c.Close()
 			return
 		}
+	}
+}
+
+// fix for https://github.com/googollee/go-engine.io/issues/33
+func (c *serverConn) noopLoop() {
+	for c.getUpgrade() != nil {
+		t := c.getCurrent()
+		if w, _ := t.NextWriter(message.MessageText, parser.NOOP); w != nil {
+			w.Close()
+		}
+		time.Sleep(200 * time.Millisecond)
 	}
 }
